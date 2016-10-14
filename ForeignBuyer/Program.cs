@@ -22,21 +22,35 @@ namespace ForeignBuyer
             DateTime latest = new DateTime();
             if( getLatestDataDate(ref latest) == false)
             {
-                latest = new DateTime(2016, 10, 1);
+                latest = new DateTime(2000, 3, 13);
             }
             String previous_data = getPreviousData();
 
-            JuristicPage juristic = new JuristicPage();
+            DateTime newFormatStart = new DateTime(2004, 4, 7);
+
+            JuristicPageNew juristicNew = new JuristicPageNew();
+            JuristicPageLegacy juristicLegacy = new JuristicPageLegacy();
 
             using (StreamWriter sw = new StreamWriter(fileName, false, Encoding.GetEncoding("big5")))
             {
                 DateTime date = DateTime.Today;
+                //DateTime date = new DateTime(2001, 10, 31);
+
                 while (!date.Equals(latest))
                 {
+                    JuristicPage juristic;
+                    if (date >= newFormatStart)
+                        juristic = juristicNew;
+                    else
+                        juristic = juristicLegacy;
+
                     String page_html = juristic.download(juristic.getPath(), date);
 
+                    //debug
+                    //DbgSaveFile( date.ToShortDateString()+".html",page_html);
+
                     String[] res = new String[3];
-                    Boolean success = juristic.parse(page_html, ref res);
+                    Boolean success = juristic.parse(date, page_html, ref res);
 
                     sw.Write(date.ToShortDateString() + " ");
                     Console.Write(date.ToShortDateString() + " ");
@@ -57,17 +71,7 @@ namespace ForeignBuyer
 
                 sw.Write(previous_data);
             }
-                
 
-            
-            
-            /*using (StreamWriter sw = new StreamWriter("test.html", false, Encoding.GetEncoding("big5")))
-            {
-                sw.Write(page_html);
-                sw.Close();
-            }*/
-
-            
         }
 
         static void parseArg(string[] args, ref Boolean showArgsOnly)
@@ -135,6 +139,16 @@ namespace ForeignBuyer
                 res = sw.ReadToEnd();
             }
             return res;
+        }
+
+        static void DbgSaveFile(String filename, String content)
+        {
+            filename = filename.Replace('/', '_');
+            using (StreamWriter sw = new StreamWriter(filename, false, Encoding.GetEncoding("big5")))
+            {
+                sw.Write(content);
+                sw.Close();
+            }
         }
     }
 }
