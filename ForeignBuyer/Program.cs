@@ -19,14 +19,24 @@ namespace ForeignBuyer
             if (showArgsOnly)
                 return;
 
+            String firstLine = "";
+            String previous_data = getPreviousData(ref firstLine);
+
+            DateTime newFormatStart = new DateTime(2004, 4, 7);
+
             DateTime latest = new DateTime();
-            if( getLatestDataDate(ref latest) == false)
+            Boolean latestDataValid = false;
+            if (getLatestDataDate(firstLine, ref latest, ref latestDataValid) == false) //first run, or file corrupt
             {
                 latest = new DateTime(2000, 3, 13);
             }
-            String previous_data = getPreviousData();
-
-            DateTime newFormatStart = new DateTime(2004, 4, 7);
+            else
+            {
+                if (latestDataValid == false)
+                {
+                    latest = latest.AddDays(-1);
+                }
+            }
 
             JuristicPageNew juristicNew = new JuristicPageNew();
             JuristicPageLegacy juristicLegacy = new JuristicPageLegacy();
@@ -69,6 +79,8 @@ namespace ForeignBuyer
                     date = date.AddDays(-1);
                 }
 
+                if (latestDataValid)
+                    sw.WriteLine(firstLine);
                 sw.Write(previous_data);
             }
 
@@ -100,34 +112,23 @@ namespace ForeignBuyer
             }
         }
 
-        static Boolean getLatestDataDate(ref DateTime date)
+        static Boolean getLatestDataDate(String firstLine, ref DateTime date, ref Boolean latestDataValid)
         {
             Boolean res = false;
-            if (!File.Exists(fileName))
+            if (firstLine == null)
                 return false;
 
-            using (StreamReader sw = new StreamReader(fileName, Encoding.GetEncoding("big5")))
+            String[] segs = firstLine.Split(new char[] { ' ', '\t' });
+            date = DateTime.Parse(segs[0]);
+            if (segs.Length >= 1)
             {
-                //try 2 times
-                for (int i = 0; i < 2; i++)
-                {
-                    String line = sw.ReadLine();
-                    if (line != null)
-                    {
-                        String[] segs = line.Split(new char[] { ' ', '\t' });
-                        date = DateTime.Parse(segs[0]);
-                        if (segs.Length >= 4)
-                        {
-                            res = true;
-                            break;
-                        }
-                    }
-                }
+                res = true;
+                latestDataValid = (segs.Length >= 4);
             }
             return res;
         }
 
-        static String getPreviousData()
+        static String getPreviousData(ref String firstLine)
         {
             String res = "";
 
@@ -136,6 +137,7 @@ namespace ForeignBuyer
 
             using (StreamReader sw = new StreamReader(fileName, Encoding.GetEncoding("big5")))
             {
+                firstLine = sw.ReadLine();
                 res = sw.ReadToEnd();
             }
             return res;
